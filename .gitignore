@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# Data and outputs
+data/raw/
+data/processed/
+data/train/
+data/val/
+data/test/
+
+# Checkpoints and model weights
+checkpoints/
+
+# TensorBoard
+runs/
+
+# Results
+results/
+
+# Visual outputs
+*.gif
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+**/.DS_Store
