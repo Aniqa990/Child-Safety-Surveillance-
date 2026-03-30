@@ -54,14 +54,86 @@ def split_dataset():
         videos = list(video_groups.keys())
         random.shuffle(videos)
 
-        n = len(videos)
-        n_train = int(n * TRAIN_RATIO)
-        n_val   = int(n * VAL_RATIO)
+        if len(videos) <= 1:
+            # If class has one or zero source videos, do clip-level split.
+            print(f"[Split] {class_name}: using clip-level split (only {len(videos)} source video)")
+            random.shuffle(clips)
+            n = len(clips)
+            n_train = int(round(n * TRAIN_RATIO))
+            n_val = int(round(n * VAL_RATIO))
+            n_test = n - n_train - n_val
 
+            if n_val == 0 and n >= 2:
+                n_val = 1
+            if n_test == 0 and n >= 3:
+                n_test = 1
+
+            # adjust to keep sum = n
+            if n_train + n_val + n_test > n:
+                overflow = n_train + n_val + n_test - n
+                if n_test > 0:
+                    n_test -= overflow
+                elif n_val > 0:
+                    n_val -= overflow
+                else:
+                    n_train -= overflow
+
+            if n_train + n_val + n_test < n:
+                n_train += n - (n_train + n_val + n_test)
+
+            split_clips = {
+                "train": clips[:n_train],
+                "val": clips[n_train:n_train + n_val],
+                "test": clips[n_train + n_val:],
+            }
+
+            for split, split_list in split_clips.items():
+                dst_dir = Path(SPLIT_ROOT) / split / class_name
+                dst_dir.mkdir(parents=True, exist_ok=True)
+                for clip in split_list:
+                    shutil.copy(str(clip), str(dst_dir / clip.name))
+                    stats[class_name][split] += 1
+
+            continue
+
+        n = len(videos)
+        # Compute target counts
+        n_train = int(round(n * TRAIN_RATIO))
+        n_val = int(round(n * VAL_RATIO))
+        n_test = n - n_train - n_val
+
+        if n == 2:
+            # 2-source-video case: keep small but non-empty validation
+            n_train = 1
+            n_val = 1
+            n_test = 0
+        elif n >= 3:
+            # Ensure each split gets at least one source video
+            n_train = max(1, n_train)
+            n_val = max(1, n_val)
+            n_test = max(1, n_test)
+
+            # Fix total if needed
+            while n_train + n_val + n_test > n:
+                if n_test > 1:
+                    n_test -= 1
+                elif n_val > 1:
+                    n_val -= 1
+                else:
+                    n_train -= 1
+            while n_train + n_val + n_test < n:
+                n_train += 1
+        else:
+            # n==0 or n==1 should be handled above, but keep safe fallback
+            n_train = n
+            n_val = 0
+            n_test = 0
+
+        print(f"[Split] {class_name}: using video-level split ({n} source videos => {n_train} train, {n_val} val, {n_test} test)")
         split_videos = {
             "train": videos[:n_train],
-            "val":   videos[n_train:n_train + n_val],
-            "test":  videos[n_train + n_val:],
+            "val": videos[n_train:n_train + n_val],
+            "test": videos[n_train + n_val:],
         }
 
         # Assign all clips from each video to the same split
