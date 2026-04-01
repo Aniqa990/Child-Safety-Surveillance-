@@ -28,6 +28,11 @@ data/test/
 # Checkpoints and model weights
 checkpoints/
 
+# YOLO model weights
+*.pt
+*.pth
+*.weights
+
 # TensorBoard
 runs/
 
