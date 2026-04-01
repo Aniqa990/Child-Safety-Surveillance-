@@ -329,17 +329,18 @@ Output structure:
 import cv2
 import numpy as np
 import os
+import imageio
 from pathlib import Path
 from tqdm import tqdm
 from ultralytics import YOLO
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
-RAW_DIR       = "data/raw"
+RAW_DIR       = r"C:\Users\22K-4228\Downloads\dataset"
 OUTPUT_DIR    = "data/processed"
 CLIP_LEN      = 16            # number of frames per clip
 FRAME_SIZE    = (112, 112)    # resize each frame to (W, H) for 3D CNN
 OVERLAP       = 0             # frame overlap between clips (0 = no overlap)
-SAVE_PREVIEW  = True          # save first clip of each class as .mp4 for visual check
+SAVE_PREVIEW  = False          # save first clip of each class as .mp4 for visual check
 # ───────────────────────────────────────────────────────────────────────────────
 
 
@@ -421,16 +422,39 @@ def extract_clips(frames: list) -> list:
     return clips
 
 
-def save_preview_mp4(clip: np.ndarray, output_path: str, fps: int = 8):
-    """Save a (T, H, W, 3) clip as .mp4 for visual inspection."""
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    h, w   = clip.shape[1], clip.shape[2]
-    writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
-    for i in range(clip.shape[0]):
-        writer.write(clip[i])
-    writer.release()
-    print(f"  [Preview] Saved -> {output_path}")
+# def save_preview_mp4(clip: np.ndarray, output_path: str, fps: int = 8):
+#     """Save a (T, H, W, 3) clip as .mp4 for visual inspection."""
+#     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+#     h, w   = clip.shape[1], clip.shape[2]
+#     writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
+#     for i in range(clip.shape[0]):
+#         writer.write(clip[i])
+#     writer.release()
+#     print(f"  [Preview] Saved -> {output_path}")
 
+def save_preview_mp4(clip: np.ndarray, output_path: str, fps: int = 8):
+    """Save a (T, H, W, 3) clip as .mp4 for visual inspection using imageio."""
+    # Initialize imageio writer with high quality
+    writer = imageio.get_writer(output_path, fps=fps, quality=9, macro_block_size=None)
+    
+    # Scale factor for the preview (112 * 5 = 560px)
+    preview_size = (clip.shape[2] * 5, clip.shape[1] * 5) 
+    
+    for i in range(clip.shape[0]):
+        # Extract the tiny 112x112 frame
+        frame = clip[i]
+        
+        # Upscale the frame to 560x560 just for the video preview
+        # cv2.INTER_NEAREST keeps the pixels sharp instead of muddying them
+        frame_large = cv2.resize(frame, preview_size, interpolation=cv2.INTER_NEAREST)
+        
+        # Convert BGR (OpenCV format) to RGB (Standard format) before saving
+        frame_rgb = cv2.cvtColor(frame_large, cv2.COLOR_BGR2RGB)
+        
+        writer.append_data(frame_rgb)
+        
+    writer.close()
+    print(f"  [Preview] Saved -> {output_path} (Upscaled for viewing)")
 
 def process_video(video_path: str, model) -> list:
     """
