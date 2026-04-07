@@ -24,8 +24,10 @@ from models.cnn3d import build_model
 from torch.utils.data import DataLoader
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
-TEST_DIR       = "data/test"
-CHECKPOINT     = "checkpoints/best_model.pth"
+# TEST_DIR       = "data/test"
+# Inside evaluate.py (for later!)
+TEST_DIR = "G:/My Drive/Split_FYP_Data/test"
+CHECKPOINT     = "G:/My Drive/Model_Checkpoints/best_r2plus1d.pth"
 BATCH_SIZE     = 8
 CLIP_LEN       = 16
 NUM_WORKERS    = 4

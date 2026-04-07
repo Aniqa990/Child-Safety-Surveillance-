@@ -238,8 +238,12 @@ from models.slowfast import build_slowfast_model, unfreeze_slowfast, prepare_slo
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 # Local (VSCode)
-TRAIN_DIR = "data/train"
-VAL_DIR   = "data/val"
+# TRAIN_DIR = "G:/My Drive/Split_FYP_Data/train"
+TRAIN_DIR = "C:/Users/22K-4228/Downloads/train"
+# VAL_DIR   = "G:/My Drive/Split_FYP_Data/val"
+VAL_DIR   = "C:/Users/22K-4228/Downloads/val"
+# TRAIN_DIR = "data/train"
+# VAL_DIR   = "data/val"
 
 # Colab — uncomment if running on Colab
 # from google.colab import drive
@@ -251,7 +255,8 @@ VAL_DIR   = "data/val"
 # TRAIN_DIR = "/kaggle/input/your-dataset-name/data/train"
 # VAL_DIR   = "/kaggle/input/your-dataset-name/data/val"
 
-CHECKPOINT_DIR = "checkpoints"
+# CHECKPOINT_DIR = "checkpoints"
+CHECKPOINT_DIR   = "G:/My Drive/Model_Checkpoints"
 LOG_DIR        = "runs"
 
 CLIP_LEN    = 32    # 32 frames — works for both R(2+1)D and SlowFast
