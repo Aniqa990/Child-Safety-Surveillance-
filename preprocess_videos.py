@@ -46,29 +46,42 @@ def process_video(video_path):
 
 def process_dataset():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    video_exts = {".mp4", ".avi", ".mov", ".mkv"}
+    VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv"}
     total_clips = 0
 
-    for root_folder, sub_folder, class_name in SOURCES:
-        src_path = BASE / root_folder / sub_folder
+    print(f"Searching for videos in: {BASE}")
+
+    for dataset_folder, inner_name, class_name in SOURCES:
+        src_base = BASE / dataset_folder
         dest_path = OUTPUT_DIR / class_name
         dest_path.mkdir(parents=True, exist_ok=True)
         
-        if not src_path.exists():
-            print(f"[SKIP] Path not found: {src_path}")
+        if not src_base.exists():
+            print(f"[WARN] Root folder not found: {src_base}")
             continue
 
-        videos = [f for f in src_path.iterdir() if f.suffix.lower() in video_exts]
-        print(f"\n[PROCESSING] {class_name} from {sub_folder} ({len(videos)} videos)")
+        # FIND FOLDER LOGIC: handles timestamped wrappers by searching recursively
+        found_dirs = [p for p in src_base.rglob(inner_name) if p.is_dir()]
+        if not found_dirs:
+            print(f"[WARN] No subfolder '{inner_name}' found under {src_base}")
+            continue
 
-        for v_path in tqdm(videos):
-            clips = process_video(v_path)
-            for i, clip in enumerate(clips):
-                out_name = f"{v_path.stem}_clip{i:03d}.npy"
-                np.save(str(dest_path / out_name), clip)
-                total_clips += 1
+        for src_dir in found_dirs:
+            videos = [f for f in src_dir.iterdir() if f.suffix.lower() in VIDEO_EXTS]
+            if not videos:
+                continue
 
-    print(f"\nDone. Total clips: {total_clips} saved to {OUTPUT_DIR}")
+            print(f"\n[PROCESSING] {class_name} from {src_dir.relative_to(BASE)} ({len(videos)} videos)")
+
+            for v_path in tqdm(videos, desc=f"  {class_name}"):
+                clips = process_video(v_path)
+                for i, clip in enumerate(clips):
+                    # Output name preserves the original filename (including aug_ prefix)
+                    out_name = f"{v_path.stem}_clip{i:03d}.npy"
+                    np.save(str(dest_path / out_name), clip)
+                    total_clips += 1
+
+    print(f"\nPreprocessing Complete. Total clips: {total_clips} saved to {OUTPUT_DIR}")
 
 if __name__ == "__main__":
     process_dataset()
