@@ -48,7 +48,7 @@ from models.cnn3d import build_model
 # Kaggle slugifies the notebook name "r(2+1)d" → "r-2-1-d".
 # If your sidebar shows a different slug, update this path.
 CHECKPOINT_DIR  = Path("/kaggle/input/notebooks/aniqaaazhar990/r-2-1-d/checkpoints")
-CHECKPOINT_GLOB = "best_r2plus1d_fold*.pt"
+CHECKPOINT_GLOB = "best_r2plus1d_fold*.pth"
 
 TEST_DIR    = Path("/kaggle/input/datasets/aniqaazhar990/test-test")
 OUTPUT_DIR  = Path("/kaggle/working/eval_results")
