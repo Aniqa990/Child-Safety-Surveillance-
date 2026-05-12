@@ -1,131 +1,126 @@
-# import os
-# from pathlib import Path
+"""
+check.py
 
-# # Change this if your folders are located somewhere else
-# SPLIT_ROOT = "data" 
+Data leakage checker for augmentation-only datasets.
 
-# def check_data_leakage():
-#     splits = ["train", "val", "test"]
-#     video_sets = {"train": set(), "val": set(), "test": set()}
+Correctly handles filenames like:
+    aug_GaussianBlur_fight001_clip000.npy
+    aug_GrayScale_fight001_clip000.npy
 
-#     print("🔍 Scanning folders for Data Leakage...\n")
+Both map to source video 'fight001'. This script checks that no
+source video appears in more than one split.
 
-#     # 1. Gather the true base names of all videos in each folder
-#     for split in splits:
-#         split_dir = Path(SPLIT_ROOT) / split
-#         if not split_dir.exists():
-#             continue
-            
-#         for npy_file in split_dir.rglob("*.npy"):
-#             name = npy_file.stem
-            
-#             # Strip the augmentation text to find the true source name
-#             if "Copy of " in name:
-#                 name = name.split("Copy of ")[-1]
-                
-#             # Strip the clip number (e.g., "fi001_clip000" becomes "fi001")
-#             base_name = name.split("_clip")[0]
-            
-#             video_sets[split].add(base_name)
+Also warns if val/test contain multiple aug types of the same source
+(which inflates metrics by including near-duplicate clips in evaluation).
 
-#     # 2. Check for overlaps (Leakage)
-#     train_val_leak = video_sets["train"].intersection(video_sets["val"])
-#     train_test_leak = video_sets["train"].intersection(video_sets["test"])
-#     val_test_leak = video_sets["val"].intersection(video_sets["test"])
+Usage:
+    python check.py
+"""
 
-#     # 3. Print the results
-#     if not train_val_leak and not train_test_leak and not val_test_leak:
-#         print("✅ SUCCESS: Your data is perfectly split! No source videos overlap.")
-#     else:
-#         print("🚨 WARNING: DATA LEAKAGE DETECTED 🚨")
-#         if train_val_leak:
-#             print(f"\n❌ These {len(train_val_leak)} videos are in BOTH Train and Val:")
-#             print(list(train_val_leak)[:10]) # Prints up to 10 examples
-            
-#         if train_test_leak:
-#             print(f"\n❌ These {len(train_test_leak)} videos are in BOTH Train and Test:")
-#             print(list(train_test_leak)[:10])
-            
-#         if val_test_leak:
-#             print(f"\n❌ These {len(val_test_leak)} videos are in BOTH Val and Test:")
-#             print(list(val_test_leak)[:10])
-
-# if __name__ == "__main__":
-#     check_data_leakage()
-
-import os
 from pathlib import Path
 from collections import defaultdict
 
-# Change this if your folders are located somewhere else
-SPLIT_ROOT = "data" 
+SPLIT_ROOT = "data"
 
-def check_data_leakage_detailed():
+
+def get_base_name(stem: str) -> str:
+    """aug_GaussianBlur_fight001_clip000 → fight001"""
+    name = "_clip".join(stem.split("_clip")[:-1]) if "_clip" in stem else stem
+    if name.startswith("aug_"):
+        parts = name.split("_", 2)
+        if len(parts) == 3:
+            name = parts[2]
+    return name
+
+
+def get_aug_type(stem: str) -> str:
+    """aug_GaussianBlur_fight001_clip000 → GaussianBlur"""
+    if stem.startswith("aug_"):
+        parts = stem.split("_", 2)
+        if len(parts) >= 2:
+            return parts[1]
+    return "original"
+
+
+def check_leakage():
     splits = ["train", "val", "test"]
-    
-    # This will store: video_files["train"]["climbing_042"] = ["climbing_042_clip001.npy", "aug_Brightness..."]
-    video_files = {
-        "train": defaultdict(list),
-        "val": defaultdict(list),
-        "test": defaultdict(list)
-    }
 
-    print("🔍 Scanning folders for Data Leakage...\n")
+    # split → class → set of source names
+    source_sets  = {s: defaultdict(set) for s in splits}
+    # split → class → source → set of aug types
+    aug_presence = {s: defaultdict(lambda: defaultdict(set)) for s in splits}
+    clip_counts  = {s: 0 for s in splits}
 
-    # 1. Gather files and group them by their true base names
     for split in splits:
         split_dir = Path(SPLIT_ROOT) / split
         if not split_dir.exists():
             continue
-            
-        for npy_file in split_dir.rglob("*.npy"):
-            name = npy_file.stem
-            
-            # Strip the augmentation text
-            if "Copy of " in name:
-                name = name.split("Copy of ")[-1]
-                
-            # Strip the clip number to find the base name
-            base_name = name.split("_clip")[0]
-            
-            # Save the FULL file name under its base group
-            video_files[split][base_name].append(npy_file.name)
+        for npy in split_dir.rglob("*.npy"):
+            cls      = npy.parent.name
+            base     = get_base_name(npy.stem)
+            aug_type = get_aug_type(npy.stem)
+            source_sets[split][cls].add(base)
+            aug_presence[split][cls][base].add(aug_type)
+            clip_counts[split] += 1
 
-    # 2. Check for overlaps by looking at the keys (base names)
-    train_val_leak = set(video_files["train"].keys()).intersection(set(video_files["val"].keys()))
-    train_test_leak = set(video_files["train"].keys()).intersection(set(video_files["test"].keys()))
-    val_test_leak = set(video_files["val"].keys()).intersection(set(video_files["test"].keys()))
+    # ── Summary ────────────────────────────────────────────────────────────
+    print("Dataset summary")
+    print("─" * 55)
+    all_classes = sorted({c for s in splits for c in source_sets[s]})
+    for split in splits:
+        n_sources = sum(len(v) for v in source_sets[split].values())
+        print(f"  {split:<6}: {clip_counts[split]:>6} clips | {n_sources:>4} source videos")
 
-    # 3. Print the detailed results
-    if not train_val_leak and not train_test_leak and not val_test_leak:
-        print("✅ SUCCESS: Your data is perfectly split! No source videos overlap.")
-        return
+    # ── Leakage check ──────────────────────────────────────────────────────
+    print()
+    leakage_found = False
+    for cls in all_classes:
+        tv = source_sets["train"][cls] & source_sets["val"][cls]
+        tt = source_sets["train"][cls] & source_sets["test"][cls]
+        vt = source_sets["val"][cls]   & source_sets["test"][cls]
+        if tv or tt or vt:
+            leakage_found = True
+            print(f"[LEAK] Class '{cls}':")
+            if tv: print(f"  train ∩ val  ({len(tv)}): {sorted(tv)[:5]}")
+            if tt: print(f"  train ∩ test ({len(tt)}): {sorted(tt)[:5]}")
+            if vt: print(f"  val ∩ test   ({len(vt)}): {sorted(vt)[:5]}")
 
-    print("🚨 WARNING: DATA LEAKAGE DETECTED 🚨\n")
-    
-    def print_leakage_details(leak_set, split1, split2):
-        if not leak_set:
-            return
-        print(f"❌ {len(leak_set)} source videos overlap between {split1.upper()} and {split2.upper()}:")
-        
-        # We'll print the full details for the first 5 leaking videos to avoid flooding the terminal
-        for base_name in list(leak_set)[:5]:
-            print(f"\n   📹 Video Group: '{base_name}'")
-            print(f"   -> Found in {split1.upper()}:")
-            for f in video_files[split1][base_name]:
-                print(f"      - {f}")
-                
-            print(f"   -> Found in {split2.upper()}:")
-            for f in video_files[split2][base_name]:
-                print(f"      - {f}")
-                
-        if len(leak_set) > 5:
-            print(f"\n   ... plus {len(leak_set) - 5} more leaking video groups (hidden to save space).")
-        print("-" * 60)
+    if not leakage_found:
+        print("✓ No source video leakage detected across splits.")
 
-    print_leakage_details(train_val_leak, "train", "val")
-    print_leakage_details(train_test_leak, "train", "test")
-    print_leakage_details(val_test_leak, "val", "test")
+    # ── Near-duplicate check in val/test ───────────────────────────────────
+    print()
+    near_dup_found = False
+    for split in ["val", "test"]:
+        for cls in all_classes:
+            multi_aug = {
+                src: aug_types
+                for src, aug_types in aug_presence[split][cls].items()
+                if len(aug_types) > 1
+            }
+            if multi_aug:
+                near_dup_found = True
+                print(f"[WARN] {split}/{cls}: {len(multi_aug)} source videos "
+                      f"have multiple aug types (near-duplicates in eval):")
+                for src, augs in list(multi_aug.items())[:3]:
+                    print(f"  {src}: {sorted(augs)}")
+
+    if not near_dup_found:
+        print("✓ Val and test sets each use one aug type per source video "
+              "(no near-duplicate clips in evaluation).")
+
+    # ── Aug type distribution ──────────────────────────────────────────────
+    print()
+    print("Augmentation type distribution per split:")
+    for split in splits:
+        aug_type_counts: dict[str, int] = defaultdict(int)
+        split_dir = Path(SPLIT_ROOT) / split
+        if not split_dir.exists():
+            continue
+        for npy in split_dir.rglob("*.npy"):
+            aug_type_counts[get_aug_type(npy.stem)] += 1
+        print(f"  {split}: {dict(sorted(aug_type_counts.items()))}")
+
 
 if __name__ == "__main__":
-    check_data_leakage_detailed()
+    check_leakage()
