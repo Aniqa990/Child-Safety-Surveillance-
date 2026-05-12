@@ -20,7 +20,7 @@ Usage:
 from pathlib import Path
 from collections import defaultdict
 
-SPLIT_ROOT = "data"
+SPLIT_ROOT = "/kaggle/working/data"
 
 
 def get_base_name(stem: str) -> str:
