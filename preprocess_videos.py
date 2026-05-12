@@ -4,7 +4,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 # ─── KAGGLE CONFIG ────────────────────────────────────────────────────────────
-BASE       = Path("/kaggle/input/aniqaazhar990")
+BASE       = Path("/kaggle/input/datasets/aniqaazhar990")
 OUTPUT_DIR = Path("/kaggle/working/data/processed")
 CLIP_LEN   = 16
 FRAME_SIZE = (112, 112)
