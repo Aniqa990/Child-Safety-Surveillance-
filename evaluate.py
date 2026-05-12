@@ -59,7 +59,7 @@ BATCH_SIZE  = 4            # lower than training — mp4 decode is CPU-heavy
 NUM_WORKERS = 2
 
 # "best_fold" or "ensemble"
-MODE = "ensemble"
+MODE = "best_fold"
 
 # Mapping: test folder name  →  training class name
 # Add / remove entries if your classes differ.
