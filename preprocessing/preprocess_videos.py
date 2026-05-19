@@ -14,7 +14,6 @@ SOURCES = [
     ("fall-child",   "fall",             "fall"),
     ("fight-child",  "fight",            "fight"),
     ("fight-child",  "additional_fight", "fight"),
-    ("adultfight",   "adultFight",       "fight"),
     ("unsafeclimb",  "unsafeClimb",      "unsafeClimb"),
     ("unsafeclimb",  "additional_climb", "unsafeClimb"),
     ("unsafethrow",  "unsafeThrow",      "unsafeThrow"),

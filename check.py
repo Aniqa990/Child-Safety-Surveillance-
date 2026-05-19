@@ -12,9 +12,6 @@ source video appears in more than one split.
 
 Also warns if val/test contain multiple aug types of the same source
 (which inflates metrics by including near-duplicate clips in evaluation).
-
-Usage:
-    python check.py
 """
 
 from pathlib import Path
@@ -106,7 +103,7 @@ def check_leakage():
                     print(f"  {src}: {sorted(augs)}")
 
     if not near_dup_found:
-        print("✓ Val and test sets each use one aug type per source video "
+        print("Val and test sets each use one aug type per source video "
               "(no near-duplicate clips in evaluation).")
 
     # ── Aug type distribution ──────────────────────────────────────────────

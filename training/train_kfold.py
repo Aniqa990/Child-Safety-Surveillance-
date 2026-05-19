@@ -2,33 +2,15 @@
 train_kfold.py
 
 Stratified Group K-Fold for the R(2+1)D-18 action classifier.
-Designed for datasets where ALL files are augmented (no originals).
 
-Why Stratified Group K-Fold?
------------------------------
-Your files:  aug_GaussianBlur_fight001_clip000.npy
-             aug_GrayScale_fight001_clip000.npy
-             aug_Brightness_fight001_clip000.npy
-
-All three come from source video fight001.
-
-- Plain K-Fold      : ignores class balance → skewed folds
-- Stratified K-Fold : ignores the source group → leakage
-                      (GaussianBlur_fight001 in train, GrayScale_fight001
-                       in val = model already saw that video)
 - Stratified GROUP K-Fold : keeps all augmentations of fight001 in
                              the SAME fold AND balances class ratios.
-                             This is the correct choice.
 
 Val / Test rule
 ---------------
 Each val fold uses ONE augmentation type per source video to avoid
 near-duplicate clips inflating the metric. The training fold keeps
 all augmentation types for maximum diversity.
-
-Usage:
-    python train_kfold.py
-    python train_kfold.py --folds 3   # use 3 folds if < 30 source videos/class
 """
 
 import os
